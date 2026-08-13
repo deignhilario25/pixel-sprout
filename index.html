@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Sprout - Retro Pomodoro Timer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #1a1c23;
+            --card-bg: #262938;
+            --text-color: #f8f9fa;
+            --accent-green: #2ecc71;
+            --accent-red: #e74c3c;
+            --accent-yellow: #f1c40f;
+            --border-color: #3f445e;
+        }
+
+        body {
+            font-family: 'Press Start 2P', monospace;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border: 4px solid var(--border-color);
+            border-radius: 8px;
+            padding: 30px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 8px 0 rgba(0,0,0,0.4);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 18px;
+            margin-bottom: 25px;
+            color: var(--accent-yellow);
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 25px;
+            gap: 5px;
+        }
+
+        .tab-btn {
+            font-family: 'Press Start 2P', monospace;
+            background-color: #1a1c23;
+            color: var(--text-color);
+            border: 2px solid var(--border-color);
+            padding: 10px 5px;
+            font-size: 9px;
+            cursor: pointer;
+            flex: 1;
+            transition: 0.1s;
+        }
+
+        .tab-btn.active {
+            background-color: var(--accent-green);
+            color: #1a1c23;
+            border-color: #27ae60;
+            box-shadow: 0 4px 0 #1e8449;
+            transform: translateY(-2px);
+        }
+
+        .timer-display {
+            font-size: 36px;
+            margin: 30px 0;
+            color: var(--text-color);
+            text-shadow: 3px 3px 0px #000;
+        }
+
+        .garden-stage {
+            font-size: 50px;
+            margin: 20px 0;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 25px;
+        }
+
+        .btn {
+            font-family: 'Press Start 2P', monospace;
+            padding: 12px 20px;
+            font-size: 10px;
+            cursor: pointer;
+            border: 2px solid #000;
+            border-radius: 4px;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.5);
+            transition: 0.1s;
+        }
+
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 rgba(0,0,0,0.5);
+        }
+
+        .btn-start {
+            background-color: var(--accent-green);
+            color: #1a1c23;
+        }
+
+        .btn-pause {
+            background-color: var(--accent-yellow);
+            color: #1a1c23;
+        }
+
+        .btn-reset {
+            background-color: var(--accent-red);
+            color: #fff;
+        }
+
+        .stats {
+            margin-top: 30px;
+            font-size: 10px;
+            line-height: 1.6;
+            color: #a0a5bc;
+            border-top: 2px dashed var(--border-color);
+            padding-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🌱 Pixel Sprout</h1>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchMode('work', 25)">Focus (25m)</button>
+            <button class="tab-btn" onclick="switchMode('shortBreak', 5)">Break (5m)</button>
+            <button class="tab-btn" onclick="switchMode('longBreak', 15)">Rest (15m)</button>
+        </div>
+
+        <div class="garden-stage" id="plantDisplay">🫘</div>
+
+        <div class="timer-display" id="timer">25:00</div>
+
+        <div class="controls">
+            <button class="btn btn-start" id="startBtn" onclick="toggleTimer()">Start</button>
+            <button class="btn btn-reset" onclick="resetTimer()">Reset</button>
+        </div>
+
+        <div class="stats">
+            Completed Focus Sessions: <span id="sessionCount">0</span>
+        </div>
+    </div>
+
+    <script>
+        let timeLeft = 25 * 60;
+        let timerId = null;
+        let isRunning = false;
+        let currentMode = 'work';
+        let completedSessions = 0;
+
+        const timerDisplay = document.getElementById('timer');
+        const startBtn = document.getElementById('startBtn');
+        const sessionCountDisplay = document.getElementById('sessionCount');
+        const plantDisplay = document.getElementById('plantDisplay');
+
+        const plants = ['🫘', '🌱', '🌿', '🪴', '🌻'];
+
+        function updateDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Update page title with countdown
+            document.title = `(${timerDisplay.textContent}) Pixel Sprout`;
+        }
+
+        function updatePlantVisual() {
+            if (currentMode !== 'work') {
+                plantDisplay.textContent = '☕';
+                return;
+            }
+            let totalTime = 25 * 60;
+            let elapsed = totalTime - timeLeft;
+            let progressIndex = Math.min(Math.floor((elapsed / totalTime) * plants.length), plants.length - 1);
+            if (elapsed === 0) progressIndex = 0;
+            plantDisplay.textContent = plants[progressIndex];
+        }
+
+        function switchMode(mode, minutes) {
+            if (isRunning) toggleTimer();
+            currentMode = mode;
+            timeLeft = minutes * 60;
+            
+            // Update active tab style
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            updateDisplay();
+            updatePlantVisual();
+        }
+
+        function toggleTimer() {
+            if (isRunning) {
+                clearInterval(timerId);
+                isRunning = false;
+                startBtn.textContent = 'Start';
+                startBtn.classList.remove('btn-pause');
+                startBtn.classList.add('btn-start');
+            } else {
+                isRunning = true;
+                startBtn.textContent = 'Pause';
+                startBtn.classList.remove('btn-start');
+                startBtn.classList.add('btn-pause');
+                
+                timerId = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        updateDisplay();
+                        updatePlantVisual();
+                    } else {
+                        clearInterval(timerId);
+                        isRunning = false;
+                        startBtn.textContent = 'Start';
+                        startBtn.classList.remove('btn-pause');
+                        startBtn.classList.add('btn-start');
+                        
+                        if (currentMode === 'work') {
+                            completedSessions++;
+                            sessionCountDisplay.textContent = completedSessions;
+                            plantDisplay.textContent = '🌻';
+                            alert('Focus session complete! Your plant grew into a sunflower! Take a break.');
+                        } else {
+                            alert('Break time is over! Back to work.');
+                        }
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetTimer() {
+            if (isRunning) toggleTimer();
+            let minutes = currentMode === 'work' ? 25 : (currentMode === 'shortBreak' ? 5 : 15);
+            timeLeft = minutes * 60;
+            updateDisplay();
+            updatePlantVisual();
+        }
+
+        updateDisplay();
+    </script>
+</body>
+</html>
